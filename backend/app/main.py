@@ -12,6 +12,7 @@ from app.services.enhanced_video_prompt_builder import EnhancedVideoPromptBuilde
 from app.services.pdf_parser import parse_pdf
 from app.services.kg_builder import build_graph
 from app.services.discipline_adapter import DisciplineAdapter
+from app.services.reasoning_engine import DirectorReasoner
 
 app = FastAPI(title="Director Mode API")
 
@@ -53,13 +54,10 @@ async def ingest_pdf(pdf: UploadFile = File(...)):
     pdf_path = tmp_dir / pdf.filename
     with open(pdf_path, "wb") as f:
         f.write(await pdf.read())
-    # parse
     paper_struct = parse_pdf(str(pdf_path))
     (tmp_dir / "paper_struct.json").write_text(json.dumps(paper_struct, ensure_ascii=False, indent=2), encoding="utf-8")
-    # build graph
     graph = build_graph(paper_struct)
     (tmp_dir / "graph.json").write_text(json.dumps(graph.model_dump(), ensure_ascii=False, indent=2), encoding="utf-8")
-    # compact claims/goals from abstract + graph nodes
     claims = paper_struct.get("abstract", "").split(".")[:3]
     goals = [n["name"] for n in graph.model_dump()["nodes"][:3]]
     return {
@@ -68,10 +66,7 @@ async def ingest_pdf(pdf: UploadFile = File(...)):
         "abstract": paper_struct.get("abstract"),
         "claims": [c.strip() for c in claims if c.strip()],
         "goals": goals,
-        "paths": {
-            "paper_struct": str(tmp_dir / "paper_struct.json"),
-            "graph": str(tmp_dir / "graph.json")
-        }
+        "paths": {"paper_struct": str(tmp_dir / "paper_struct.json"), "graph": str(tmp_dir / "graph.json")}
     }
 
 class GenerateFromGraphRequest(BaseModel):
@@ -82,6 +77,7 @@ class GenerateFromGraphRequest(BaseModel):
     width: int = 720
     language: str = "en"
     discipline: Optional[str] = None
+    reasoning: Optional[str] = Field(default="tot", description="cot|tot|none")
 
 @app.post("/api/director/generate-from-graph", response_model=JobStatus)
 async def generate_from_graph(req: GenerateFromGraphRequest):
@@ -89,14 +85,22 @@ async def generate_from_graph(req: GenerateFromGraphRequest):
     paper_struct = json.loads((base / "paper_struct.json").read_text(encoding="utf-8"))
     graph = json.loads((base / "graph.json").read_text(encoding="utf-8"))
 
-    # derive claims/goals/storyboard notes from graph
     nodes = graph.get("nodes", [])
     top_names = [n.get("name") for n in nodes[:5] if n.get("name")]
     base_notes = [f"Emphasize concept: {name}" for name in top_names[:3]]
 
-    # discipline adaptation
     adapted = ADAPTER.adapt(req.discipline or "", req.style, base_notes)
-    storyboard_notes = adapted["notes"]
+
+    # reasoning: CoT / ToT to synthesize goals/shots/notes
+    reasoner = DirectorReasoner(discipline_style_desc=adapted.get("style_desc"))
+    if req.reasoning == "cot":
+        plan = reasoner.cot_plan(paper_struct, graph)
+    elif req.reasoning == "none":
+        plan = {"key_insights": top_names[:3], "scene_goals": top_names[1:4], "shots": []}
+    else:
+        plan = reasoner.tot_select(paper_struct, graph, k=3)
+
+    storyboard_notes = reasoner.refine_prompt_notes(adapted["notes"] + plan.get("scene_goals", []))
 
     job_id = str(uuid.uuid4())
     JOBS[job_id] = {"status": "PENDING", "message": "queued"}
@@ -108,8 +112,8 @@ async def generate_from_graph(req: GenerateFromGraphRequest):
                 paper_title=paper_struct.get("title", "Untitled"),
                 abstract=paper_struct.get("abstract", ""),
                 concept_name=top_names[0] if top_names else "Core Idea",
-                key_claims=[s for s in paper_struct.get("abstract", "").split(".")[:3] if s.strip()],
-                scene_goals=top_names[1:4] if len(top_names) > 1 else ["Clarity"],
+                key_claims=plan.get("key_insights", [])[:3],
+                scene_goals=plan.get("scene_goals", [])[:3],
                 duration_sec=req.duration_sec,
                 style=adapted["style"],
                 resolution=f"{req.width*16//9}x{req.width}",
