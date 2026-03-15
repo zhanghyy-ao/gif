@@ -8,7 +8,11 @@ Env
 - DASHSCOPE_API_KEY=<your_key>
 - OUTPUT_DIR=outputs
 
-Run local
+Quick start (Python)
+- python backend/start_backend.py --port 8080 --reload
+  - optional: --run-demo --paper-json backend/demo_paper.json
+
+Run local (manual)
 - cd backend
 - python -m venv .venv && .venv\Scripts\activate
 - pip install -r requirements.txt

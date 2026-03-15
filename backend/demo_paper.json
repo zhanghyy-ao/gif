@@ -1,0 +1,17 @@
+{
+  "paper_title": "Demo: HTML-guided Director Mode",
+  "abstract": "We demonstrate a director-mode pipeline to convert paper concepts into a short 6s 720p video and a lightweight GIF.",
+  "concept_name": "Core Idea",
+  "key_claims": ["Concise director prompts","GIF <= 12MB","720p/24fps"],
+  "scene_goals": ["Clarity","Engagement"],
+  "duration_sec": 6,
+  "style": "educational",
+  "fps": 24,
+  "width": 720,
+  "storyboard_notes": [
+    "Hero: left diagram block, right title card",
+    "Primary #2E86DE, accent #F1C40F, light background",
+    "Shot1: slow push-in; key term bottom-left",
+    "Arrows animate L→R; sequential fade-in"
+  ]
+}
