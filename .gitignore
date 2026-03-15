@@ -1,0 +1,15 @@
+# Git ignore
+backend/venv/
+outputs/
+uploads/
+*.msi
+*.zip
+*installer*.exe
+paper2gif.db
+__pycache__/
+.env
+*.mp4
+*.gif
+*.log
+.DS_Store
+Thumbs.db
