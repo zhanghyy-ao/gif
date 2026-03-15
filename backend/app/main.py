@@ -11,12 +11,14 @@ from app.services.qwen_video_generator import QwenVideoGenerator
 from app.services.enhanced_video_prompt_builder import EnhancedVideoPromptBuilder
 from app.services.pdf_parser import parse_pdf
 from app.services.kg_builder import build_graph
+from app.services.discipline_adapter import DisciplineAdapter
 
 app = FastAPI(title="Director Mode API")
 
 JOBS: Dict[str, Dict[str, Any]] = {}
 OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", "outputs"))
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+ADAPTER = DisciplineAdapter()
 
 class DirectorRequest(BaseModel):
     paper_title: str
@@ -39,6 +41,10 @@ class JobStatus(BaseModel):
     gif_path: Optional[str] = None
     prompt_preview: Optional[str] = None
 
+@app.get("/api/director/disciplines")
+async def list_disciplines():
+    return {"disciplines": ADAPTER.list_disciplines()}
+
 @app.post("/api/director/ingest-pdf")
 async def ingest_pdf(pdf: UploadFile = File(...)):
     ingest_id = str(uuid.uuid4())
@@ -52,7 +58,7 @@ async def ingest_pdf(pdf: UploadFile = File(...)):
     (tmp_dir / "paper_struct.json").write_text(json.dumps(paper_struct, ensure_ascii=False, indent=2), encoding="utf-8")
     # build graph
     graph = build_graph(paper_struct)
-    (tmp_dir / "graph.json").write_text(graph.model_dump_json(indent=2, ensure_ascii=False), encoding="utf-8")
+    (tmp_dir / "graph.json").write_text(json.dumps(graph.model_dump(), ensure_ascii=False, indent=2), encoding="utf-8")
     # compact claims/goals from abstract + graph nodes
     claims = paper_struct.get("abstract", "").split(".")[:3]
     goals = [n["name"] for n in graph.model_dump()["nodes"][:3]]
@@ -75,6 +81,7 @@ class GenerateFromGraphRequest(BaseModel):
     fps: int = 24
     width: int = 720
     language: str = "en"
+    discipline: Optional[str] = None
 
 @app.post("/api/director/generate-from-graph", response_model=JobStatus)
 async def generate_from_graph(req: GenerateFromGraphRequest):
@@ -85,9 +92,11 @@ async def generate_from_graph(req: GenerateFromGraphRequest):
     # derive claims/goals/storyboard notes from graph
     nodes = graph.get("nodes", [])
     top_names = [n.get("name") for n in nodes[:5] if n.get("name")]
-    storyboard_notes = [
-        f"Emphasize concept: {name}" for name in top_names[:3]
-    ]
+    base_notes = [f"Emphasize concept: {name}" for name in top_names[:3]]
+
+    # discipline adaptation
+    adapted = ADAPTER.adapt(req.discipline or "", req.style, base_notes)
+    storyboard_notes = adapted["notes"]
 
     job_id = str(uuid.uuid4())
     JOBS[job_id] = {"status": "PENDING", "message": "queued"}
@@ -102,7 +111,7 @@ async def generate_from_graph(req: GenerateFromGraphRequest):
                 key_claims=[s for s in paper_struct.get("abstract", "").split(".")[:3] if s.strip()],
                 scene_goals=top_names[1:4] if len(top_names) > 1 else ["Clarity"],
                 duration_sec=req.duration_sec,
-                style=req.style,
+                style=adapted["style"],
                 resolution=f"{req.width*16//9}x{req.width}",
                 fps=req.fps,
                 language=req.language,
@@ -118,7 +127,7 @@ async def generate_from_graph(req: GenerateFromGraphRequest):
                 output_dir=str(OUTPUT_DIR / "videos"),
                 duration=req.duration_sec,
                 resolution="720p",
-                style=req.style,
+                style=adapted["style"],
                 override_prompt=prompt,
                 gif_fps=req.fps,
                 gif_width=req.width,
@@ -138,20 +147,6 @@ async def generate_from_graph(req: GenerateFromGraphRequest):
 
     asyncio.create_task(worker())
     return JobStatus(id=job_id, status="PENDING", message="queued")
-
-# existing generate-from-paper and jobs endpoints left as-is below
-class DirectorRequest(BaseModel):
-    paper_title: str
-    abstract: str
-    concept_name: str
-    key_claims: List[str] = Field(default_factory=list)
-    scene_goals: List[str] = Field(default_factory=list)
-    duration_sec: int = 6
-    style: str = "educational"
-    fps: int = 24
-    width: int = 720
-    language: str = "en"
-    storyboard_notes: Optional[List[str]] = None
 
 @app.post("/api/director/generate-from-paper", response_model=JobStatus)
 async def generate_from_paper(req: DirectorRequest):

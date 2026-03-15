@@ -1,0 +1,72 @@
+{
+  "cs_ml": {
+    "style_desc": "clean technical visualization, code/layers/graphs motif, subtle motion graphics",
+    "palette": ["#2E86DE", "#F1C40F", "#2ECC71", "#34495E"],
+    "shot_titles": ["Problem & Motivation", "Method Pipeline", "Results & Impact"],
+    "notes_templates": [
+      "Show model blocks and arrows from input to output",
+      "Highlight metrics rise with glow on chart",
+      "Use data-flow motif and node-edge diagrams"
+    ]
+  },
+  "physics": {
+    "style_desc": "scientific visualization with particles/fields, units and scales annotated",
+    "palette": ["#1B4F72", "#117A65", "#F4D03F", "#909497"],
+    "shot_titles": ["Phenomenon & Setup", "Theory & Model", "Measurement & Findings"],
+    "notes_templates": [
+      "Annotate units (eV, TeV, m/s) on key elements",
+      "Show energy curves / field lines with smooth motion",
+      "Include error bars and significance markers"
+    ]
+  },
+  "biology": {
+    "style_desc": "bio/medical illustration, cell/molecule motifs, soft colors, clear labeling",
+    "palette": ["#76D7C4", "#F5B7B1", "#7FB3D5", "#196F3D"],
+    "shot_titles": ["Biological Question", "Mechanism / Pathway", "Results / Implications"],
+    "notes_templates": [
+      "Use cell/molecule icons with labeled pathways",
+      "Animate ligand→receptor→signal cascade",
+      "Show comparison (control vs treatment)"
+    ]
+  },
+  "medicine": {
+    "style_desc": "clinical visualization, study design diagram (RCT/cohort), clear charts",
+    "palette": ["#1F618D", "#73C6B6", "#F8C471", "#566573"],
+    "shot_titles": ["Clinical Problem", "Study Design", "Outcomes"],
+    "notes_templates": [
+      "Diagram randomization / arms / flow",
+      "Label sensitivity, specificity, AUC",
+      "Use patient cohort icons and timelines"
+    ]
+  },
+  "economics": {
+    "style_desc": "economic infographic style, charts, causal diagrams, clean typography",
+    "palette": ["#2874A6", "#AF7AC5", "#48C9B0", "#B7950B"],
+    "shot_titles": ["Question & Context", "Model / Identification", "Results & Policy"],
+    "notes_templates": [
+      "Use causal graph (IV/DiD) arrows",
+      "Animate regression line / confidence band",
+      "Include effect size with clear labeling"
+    ]
+  },
+  "social_science": {
+    "style_desc": "survey/behavioral study visuals, cohorts, timelines, simple charts",
+    "palette": ["#5DADE2", "#58D68D", "#F4D03F", "#7F8C8D"],
+    "shot_titles": ["Research Question", "Method & Sample", "Findings"],
+    "notes_templates": [
+      "Show sample size and demographics pictograms",
+      "Timeline of intervention / measurement",
+      "Bar/line charts with error bars"
+    ]
+  },
+  "mathematics": {
+    "style_desc": "clean theorem-proof visuals, minimalism, focus on structure and transformations",
+    "palette": ["#2C3E50", "#95A5A6", "#E67E22", "#27AE60"],
+    "shot_titles": ["Problem & Definitions", "Key Construction", "Theorem & Insight"],
+    "notes_templates": [
+      "Animate transformation of sets/graphs",
+      "Highlight equation evolution step-by-step",
+      "Use minimal grid and clear labels"
+    ]
+  }
+}
