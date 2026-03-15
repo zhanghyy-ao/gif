@@ -2,6 +2,7 @@
 """
 Enhanced Video Prompt Builder
 将论文信息转为“导演分镜式”提示词，适配 Qwen 文生视频（更稳定、可控）。
+支持 HTML/CSS 草稿的“软约束”融合（不依赖图像参考参数）。
 """
 from typing import List, Dict, Optional
 import textwrap
@@ -14,6 +15,7 @@ class EnhancedVideoPromptBuilder:
     - 概要/目标
     - 分镜（每镜头含：主体、动作、场景、机位、运动、风格、色彩、时长）
     - 技术限制与避免项
+    - 可选：将 HTML/CSS 草稿的布局/配色/层级作为语言描述并入提示词（软约束）
     """
 
     @staticmethod
@@ -29,6 +31,7 @@ class EnhancedVideoPromptBuilder:
         fps: int = 24,
         language: str = "en",
         avoid_items: Optional[List[str]] = None,
+        storyboard_notes: Optional[List[str]] = None,
     ) -> str:
         avoid_items = avoid_items or [
             "blurry frames",
@@ -100,6 +103,10 @@ class EnhancedVideoPromptBuilder:
             ]
         )
 
+        storyboard_block = ""
+        if storyboard_notes:
+            storyboard_block = "\n" + "\n".join([f"- {n}" for n in storyboard_notes[:10]])
+
         prompt = f"""
         Title: {paper_title} — {concept_name}
         Language: {language}
@@ -121,6 +128,8 @@ class EnhancedVideoPromptBuilder:
 
         Shots Plan:
         {shots_block}
+
+        Storyboard Soft Constraints (from HTML/CSS drafts):{storyboard_block}
 
         Constraints (Important):
         {avoid_block}

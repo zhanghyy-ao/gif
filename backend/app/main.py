@@ -26,6 +26,8 @@ class DirectorRequest(BaseModel):
     fps: int = 24
     width: int = 720
     language: str = "en"
+    # 新增：HTML/CSS 草稿的“软约束”描述（每条一行要点：布局、配色、层级、动效方向等）
+    storyboard_notes: Optional[List[str]] = None
 
 class JobStatus(BaseModel):
     id: str
@@ -54,6 +56,7 @@ async def generate_from_paper(req: DirectorRequest):
                 resolution=f"{req.width*16//9}x{req.width}",
                 fps=req.fps,
                 language=req.language,
+                storyboard_notes=req.storyboard_notes or [],
             )
 
             gen = QwenVideoGenerator()
@@ -76,7 +79,7 @@ async def generate_from_paper(req: DirectorRequest):
                     "status": "SUCCEEDED",
                     "mp4_path": result.get("video_path"),
                     "gif_path": result.get("gif_path"),
-                    "prompt_preview": result.get("prompt", "")[:300]
+                    "prompt_preview": result.get("prompt", "")[:500]
                 }
             else:
                 JOBS[job_id] = {"status": "FAILED", "message": result.get("error", "unknown error")}
